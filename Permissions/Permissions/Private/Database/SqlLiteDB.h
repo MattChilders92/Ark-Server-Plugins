@@ -117,7 +117,7 @@ public:
 
 		for (auto& group : permissionGroups)
 		{
-			all_groups.Add(group.second.c_str());
+			all_groups.Add(group.first.c_str());
 		}
 
 		return all_groups;
@@ -147,10 +147,19 @@ public:
 		if (Permissions::IsPlayerInGroup(steam_id, group))
 			return "Player was already added";
 
+		TArray<FString> groups = GetPlayerGroups(steam_id);
+
+		FString new_groups;
+
+		for (const FString& current_group : groups)
+		{
+			new_groups += current_group + ",";
+		}
+		new_groups += group + ",";
 		try
 		{
-			SQLite::Statement query(db_, "UPDATE Players SET Groups = Groups || ? || ',' WHERE SteamId = ?;");
-			query.bind(1, group.ToString());
+			SQLite::Statement query(db_, "UPDATE Players SET Groups = ? WHERE SteamId = ?;");
+			query.bind(1, new_groups.ToString());
 			query.bind(2, static_cast<int64>(steam_id));
 			query.exec();
 

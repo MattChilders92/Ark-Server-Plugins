@@ -50,36 +50,33 @@ bool Hook_AShooterGameMode_HandleNewPlayer(AShooterGameMode* _this, AShooterPlay
 
 		ArkShop::TimedRewards::Get().AddTask(
 			FString::Format("Points_{}", steam_id), steam_id, [steam_id]()
+		{
+			auto groups_map = ArkShop::config["General"]["TimedPointsReward"]
+				["Groups"];
+
+			auto playerGroups = Permissions::GetPlayerGroups(steam_id);
+
+			int highestPoints = 0;
+			for (auto group_iter = groups_map.begin(); group_iter != groups_map.
+				end(); ++group_iter)
 			{
-				auto groups_map = ArkShop::config["General"]["TimedPointsReward"]
-					["Groups"];
-
-				int points_amount = groups_map["Default"].value("Amount", 0);
-
-				for (auto group_iter = groups_map.begin(); group_iter != groups_map.
-				     end(); ++group_iter)
-				{
-					const FString group_name(group_iter.key().c_str());
-					if (group_name == L"Default")
-					{
-						continue;
-					}
-
-					if (Permissions::IsPlayerInGroup(steam_id, group_name))
-					{
-						points_amount = group_iter.value().value("Amount", 0);
-						break;
+				const FString group_name(group_iter.key().c_str());
+				if (group_name == L"Default" || playerGroups.Contains(group_name)) {
+					auto points = group_iter.value().value("Amount", 0);
+					if (points > highestPoints) {
+						highestPoints = points;
 					}
 				}
+			}
 
-				if (points_amount == 0)
-				{
-					return;
-				}
+			if (highestPoints == 0)
+			{
+				return;
+			}
 
-				ArkShop::Points::AddPoints(points_amount, steam_id);
-			},
-			interval);
+			ArkShop::Points::AddPoints(highestPoints, steam_id);
+		},
+		interval);
 	}
 	return AShooterGameMode_HandleNewPlayer_original(_this, new_player, player_data, player_character, is_from_login);
 }
